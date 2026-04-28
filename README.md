@@ -1,12 +1,20 @@
 # Ruyi Actions
 
-GitHub Actions for installing the RuyiSDK package manager and creating Ruyi virtual environments in CI.
+GitHub Actions for setting up RISC-V cross-compilation environments in CI.
 
-These actions are designed for Linux runners, which is the primary supported platform for RuyiSDK binary packages.
+These actions install the required toolchains, prepare a ready-to-use cross-compilation environment, and export CMake and Meson configuration paths for later build steps. They use RuyiSDK's RISC-V package and environment support, and are designed for Linux runners.
+
+In practice, the actions can:
+
+- Install and cache RISC-V cross toolchains such as `gnu-plct`.
+- Sync package metadata and cache downloaded archives between workflow runs.
+- Create an isolated toolchain environment for the job.
+- Add the environment's `bin` directory to `PATH`.
+- Export `RUYI_CMAKE_TOOLCHAIN_FILE` and `RUYI_MESON_CROSS_FILE` for later build steps.
 
 ## Quick start
 
-Use `setup-ruyi` to install the package manager, then use `setup-ruyi-venv` to install a toolchain and create a Ruyi virtual environment. The venv action adds the environment's `bin` directory to `PATH` and exports toolchain file paths for later steps.
+Use `setup-ruyi` once near the start of the job, then use `setup-ruyi-venv` to prepare the toolchain environment your project needs. After that, build commands can use the exported environment variables directly.
 
 ```yaml
 name: Ruyi CI
@@ -34,6 +42,8 @@ jobs:
           cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE="$RUYI_CMAKE_TOOLCHAIN_FILE"
           cmake --build build
 ```
+
+The first run downloads and installs the requested packages. Later runs can reuse the cache restored by `setup-ruyi`, so `ruyi install` normally skips packages that are already present.
 
 For Meson projects, use the exported cross file:
 
