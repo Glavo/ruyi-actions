@@ -3,11 +3,6 @@ name: Demo CMake
 on:
   workflow_dispatch:
   push:
-    paths:
-      - ".github/workflows/demo-cmake.yml"
-      - "examples/cmake-hello-riscv/**"
-      - "setup-ruyi/**"
-      - "setup-ruyi-venv/**"
   pull_request:
     paths:
       - ".github/workflows/demo-cmake.yml"
