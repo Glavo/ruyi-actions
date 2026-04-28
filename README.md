@@ -103,7 +103,7 @@ If your workflow already configures Python, disable the built-in Python setup:
 
 ```yaml
 steps:
-  - uses: actions/setup-python@v5
+  - uses: actions/setup-python@v6
     with:
       python-version: "3.12"
 
