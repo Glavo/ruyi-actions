@@ -53,7 +53,10 @@ For Meson projects, use the exported cross file:
     meson compile -C build
 ```
 
-A complete self-test workflow is available at `.github/workflows/demo-cmake.yml`, using the sample project in `examples/cmake-hello-riscv`.
+Self-test workflows are available for both build systems:
+
+- `.github/workflows/demo-cmake.yml` builds `examples/cmake-hello-riscv`.
+- `.github/workflows/demo-meson.yml` builds `examples/meson-hello-riscv`.
 
 ## Reference
 

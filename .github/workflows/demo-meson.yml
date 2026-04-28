@@ -1,0 +1,45 @@
+name: Demo Meson
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/demo-meson.yml"
+      - "examples/meson-hello-riscv/**"
+      - "setup-ruyi/**"
+      - "setup-ruyi-venv/**"
+  pull_request:
+    paths:
+      - ".github/workflows/demo-meson.yml"
+      - "examples/meson-hello-riscv/**"
+      - "setup-ruyi/**"
+      - "setup-ruyi-venv/**"
+
+jobs:
+  meson-hello-riscv:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./setup-ruyi
+
+      - name: Install Meson
+        run: python -m pip install --upgrade meson ninja
+
+      - uses: ./setup-ruyi-venv
+        with:
+          profile: generic
+          toolchain: gnu-plct
+          path: .ruyi-venv
+
+      - name: Configure
+        run: |
+          meson setup build/meson-hello-riscv examples/meson-hello-riscv \
+            --cross-file "$RUYI_MESON_CROSS_FILE"
+
+      - name: Build
+        run: meson compile -C build/meson-hello-riscv --verbose
+
+      - name: Inspect artifact
+        run: file build/meson-hello-riscv/hello-ruyi-meson
