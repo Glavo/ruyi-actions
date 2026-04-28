@@ -4,7 +4,46 @@ GitHub Actions for installing the RuyiSDK package manager and creating Ruyi virt
 
 These actions are designed for Linux runners, which is the primary supported platform for RuyiSDK binary packages.
 
-## Actions
+## Quick start
+
+Use `setup-ruyi` to install the package manager, then use `setup-ruyi-venv` to install a toolchain and create a Ruyi virtual environment. The venv action adds the environment's `bin` directory to `PATH` and exports toolchain file paths for later steps.
+
+```yaml
+name: Ruyi CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruyisdk/ruyi-actions/setup-ruyi@v1
+
+      - uses: ruyisdk/ruyi-actions/setup-ruyi-venv@v1
+        with:
+          profile: riscv64
+          toolchain: gnu-plct
+          path: .ruyi-venv
+
+      - run: |
+          cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE="$RUYI_CMAKE_TOOLCHAIN_FILE"
+          cmake --build build
+```
+
+For Meson projects, use the exported cross file:
+
+```yaml
+- run: |
+    meson setup build --cross-file "$RUYI_MESON_CROSS_FILE"
+    meson compile -C build
+```
+
+## Reference
 
 ### `setup-ruyi`
 
@@ -127,36 +166,4 @@ Use `extra-config` to append additional Ruyi repository configuration.
       branch = "main"
       priority = 100
       active = true
-```
-
-## Full example
-
-```yaml
-name: Ruyi CI
-
-on:
-  push:
-  pull_request:
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: ruyisdk/ruyi-actions/setup-ruyi@v1
-        with:
-          version: "0.49.0-alpha.20260422"
-
-      - uses: ruyisdk/ruyi-actions/setup-ruyi-venv@v1
-        with:
-          profile: riscv64
-          toolchain: gnu-plct
-          emulator: qemu-user-riscv
-          path: .ruyi-venv
-
-      - run: |
-          cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE="$RUYI_CMAKE_TOOLCHAIN_FILE"
-          cmake --build build
 ```
