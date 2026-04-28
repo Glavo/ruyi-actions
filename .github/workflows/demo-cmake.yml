@@ -1,0 +1,42 @@
+name: Demo CMake
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/demo-cmake.yml"
+      - "examples/cmake-hello-riscv/**"
+      - "setup-ruyi/**"
+      - "setup-ruyi-venv/**"
+  pull_request:
+    paths:
+      - ".github/workflows/demo-cmake.yml"
+      - "examples/cmake-hello-riscv/**"
+      - "setup-ruyi/**"
+      - "setup-ruyi-venv/**"
+
+jobs:
+  cmake-hello-riscv:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./setup-ruyi
+
+      - uses: ./setup-ruyi-venv
+        with:
+          profile: riscv64
+          toolchain: gnu-plct
+          path: .ruyi-venv
+
+      - name: Configure
+        run: |
+          cmake -S examples/cmake-hello-riscv -B build/cmake-hello-riscv \
+            -DCMAKE_TOOLCHAIN_FILE="$RUYI_CMAKE_TOOLCHAIN_FILE"
+
+      - name: Build
+        run: cmake --build build/cmake-hello-riscv --verbose
+
+      - name: Inspect artifact
+        run: file build/cmake-hello-riscv/hello-ruyi

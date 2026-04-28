@@ -43,6 +43,8 @@ For Meson projects, use the exported cross file:
     meson compile -C build
 ```
 
+A complete self-test workflow is available at `.github/workflows/demo-cmake.yml`, using the sample project in `examples/cmake-hello-riscv`.
+
 ## Reference
 
 ### `setup-ruyi`
