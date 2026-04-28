@@ -3,11 +3,6 @@ name: Demo Meson
 on:
   workflow_dispatch:
   push:
-    paths:
-      - ".github/workflows/demo-meson.yml"
-      - "examples/meson-hello-riscv/**"
-      - "setup-ruyi/**"
-      - "setup-ruyi-venv/**"
   pull_request:
     paths:
       - ".github/workflows/demo-meson.yml"
