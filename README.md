@@ -22,7 +22,8 @@ Useful inputs:
 
 | Input | Default | Description |
 | --- | --- | --- |
-| `python-version` | `3.x` | Python version passed to `actions/setup-python`. |
+| `setup-python` | `true` | Run `actions/setup-python` before installing Ruyi. |
+| `python-version` | `3.x` | Python version passed to `actions/setup-python` when `setup-python` is `true`. |
 | `version` | empty | Ruyi version to install from PyPI. |
 | `install-spec` | empty | Full pip requirement specifier. Overrides `version`. |
 | `pip-extra-args` | empty | Extra arguments passed to `pip install`. |
@@ -46,6 +47,19 @@ Useful outputs:
 | `cache-root` | Ruyi cache root. |
 | `data-root` | Ruyi data root. |
 | `state-root` | Ruyi state root. |
+
+If your workflow already configures Python, disable the built-in Python setup:
+
+```yaml
+steps:
+  - uses: actions/setup-python@v5
+    with:
+      python-version: "3.12"
+
+  - uses: ruyisdk/ruyi-actions/setup-ruyi@v1
+    with:
+      setup-python: "false"
+```
 
 ### `setup-ruyi-venv`
 

@@ -7,8 +7,12 @@ branding:
   color: red
 
 inputs:
+  setup-python:
+    description: Run actions/setup-python before installing Ruyi.
+    required: false
+    default: "true"
   python-version:
-    description: Python version passed to actions/setup-python.
+    description: Python version passed to actions/setup-python when setup-python is true.
     required: false
     default: "3.x"
   version:
@@ -83,6 +87,7 @@ runs:
   using: composite
   steps:
     - name: Set up Python
+      if: ${{ inputs.setup-python == 'true' }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ inputs.python-version }}
@@ -104,6 +109,7 @@ runs:
       id: install
       shell: bash
       env:
+        INPUT_SETUP_PYTHON: ${{ inputs.setup-python }}
         INPUT_VERSION: ${{ inputs.version }}
         INPUT_INSTALL_SPEC: ${{ inputs.install-spec }}
         INPUT_PIP_EXTRA_ARGS: ${{ inputs.pip-extra-args }}
@@ -120,6 +126,14 @@ runs:
           off|local|on) ;;
           *)
             echo "::error::telemetry must be one of: off, local, on"
+            exit 2
+            ;;
+        esac
+
+        case "$INPUT_SETUP_PYTHON" in
+          true|false) ;;
+          *)
+            echo "::error::setup-python must be true or false"
             exit 2
             ;;
         esac
