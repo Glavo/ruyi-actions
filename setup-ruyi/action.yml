@@ -8,11 +8,11 @@ branding:
 
 inputs:
   setup-python:
-    description: Run actions/setup-python before installing Ruyi.
+    description: Compatibility input. This JavaScript action uses Python from PATH; run actions/setup-python before this action when a specific Python version is required.
     required: false
-    default: "true"
+    default: "false"
   python-version:
-    description: Python version passed to actions/setup-python when setup-python is true.
+    description: Compatibility input retained for workflows that previously passed python-version to setup-ruyi.
     required: false
     default: "3.x"
   version:
@@ -56,206 +56,28 @@ inputs:
     required: false
     default: ""
   telemetry:
-    description: Ruyi telemetry mode for CI. Use off, local, or on. The on mode requires a prior checkout and uploads in a post-run step.
+    description: Ruyi telemetry mode for CI. Use off, local, or on. The on mode uploads telemetry in this action's post-run step.
     required: false
     default: "on"
 
 outputs:
   ruyi-bin:
     description: Absolute path to the installed ruyi executable.
-    value: ${{ steps.install.outputs.ruyi-bin }}
   ruyi-version:
     description: Installed Ruyi version.
-    value: ${{ steps.install.outputs.ruyi-version }}
   python-venv:
     description: Python virtual environment used to install Ruyi.
-    value: ${{ steps.install.outputs.python-venv }}
   cache-root:
     description: Ruyi XDG cache root.
-    value: ${{ steps.install.outputs.cache-root }}
   data-root:
     description: Ruyi XDG data root.
-    value: ${{ steps.install.outputs.data-root }}
   state-root:
     description: Ruyi XDG state root.
-    value: ${{ steps.install.outputs.state-root }}
   config-root:
     description: Ruyi XDG config root.
-    value: ${{ steps.install.outputs.config-root }}
 
 runs:
-  using: composite
-  steps:
-    - name: Set up Python
-      if: ${{ inputs.setup-python == 'true' }}
-      uses: actions/setup-python@v6
-      with:
-        python-version: ${{ inputs.python-version }}
-
-    - name: Restore Ruyi caches
-      if: ${{ inputs.cache == 'true' }}
-      uses: actions/cache@v5
-      with:
-        path: |
-          ~/.cache/ruyi
-          ~/.local/share/ruyi
-          ~/.local/state/ruyi
-        key: ${{ runner.os }}-ruyi-${{ inputs.version }}-${{ inputs.cache-version }}
-        restore-keys: |
-          ${{ runner.os }}-ruyi-${{ inputs.version }}-
-          ${{ runner.os }}-ruyi-
-
-    - name: Install and configure Ruyi
-      id: install
-      shell: bash
-      env:
-        INPUT_SETUP_PYTHON: ${{ inputs.setup-python }}
-        INPUT_VERSION: ${{ inputs.version }}
-        INPUT_INSTALL_SPEC: ${{ inputs.install-spec }}
-        INPUT_PIP_EXTRA_ARGS: ${{ inputs.pip-extra-args }}
-        INPUT_UPDATE: ${{ inputs.update }}
-        INPUT_REPO_REMOTE: ${{ inputs.repo-remote }}
-        INPUT_REPO_BRANCH: ${{ inputs.repo-branch }}
-        INPUT_REPO_LOCAL: ${{ inputs.repo-local }}
-        INPUT_EXTRA_CONFIG: ${{ inputs.extra-config }}
-        INPUT_TELEMETRY: ${{ inputs.telemetry }}
-      run: |
-        set -euo pipefail
-
-        case "$INPUT_TELEMETRY" in
-          off|local|on) ;;
-          *)
-            echo "::error::telemetry must be one of: off, local, on"
-            exit 2
-            ;;
-        esac
-
-        case "$INPUT_SETUP_PYTHON" in
-          true|false) ;;
-          *)
-            echo "::error::setup-python must be true or false"
-            exit 2
-            ;;
-        esac
-
-        install_root="${RUNNER_TOOL_CACHE:-$HOME/.cache/actions}/ruyi-python"
-        if [ -n "$INPUT_VERSION" ]; then
-          install_root="$install_root/$INPUT_VERSION"
-        else
-          install_root="$install_root/latest"
-        fi
-
-        python -m venv "$install_root"
-
-        case "${RUNNER_OS:-Linux}" in
-          Windows)
-            python_bin="$install_root/Scripts/python"
-            ruyi_bin="$install_root/Scripts/ruyi.exe"
-            bin_dir="$install_root/Scripts"
-            ;;
-          *)
-            python_bin="$install_root/bin/python"
-            ruyi_bin="$install_root/bin/ruyi"
-            bin_dir="$install_root/bin"
-            ;;
-        esac
-
-        "$python_bin" -m pip install --upgrade pip
-
-        if [ -n "$INPUT_INSTALL_SPEC" ]; then
-          install_spec="$INPUT_INSTALL_SPEC"
-        elif [ -n "$INPUT_VERSION" ]; then
-          install_spec="ruyi==$INPUT_VERSION"
-        else
-          install_spec="ruyi"
-        fi
-
-        # shellcheck disable=SC2086
-        "$python_bin" -m pip install --upgrade $INPUT_PIP_EXTRA_ARGS "$install_spec"
-
-        echo "$bin_dir" >> "$GITHUB_PATH"
-
-        config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
-        cache_home="${XDG_CACHE_HOME:-$HOME/.cache}"
-        data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
-        state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
-
-        config_root="$config_home/ruyi"
-        cache_root="$cache_home/ruyi"
-        data_root="$data_home/ruyi"
-        state_root="$state_home/ruyi"
-
-        mkdir -p "$config_root" "$cache_root" "$data_root" "$state_root"
-
-        if [ "$INPUT_TELEMETRY" = "off" ]; then
-          export RUYI_TELEMETRY_OPTOUT=1
-          echo "RUYI_TELEMETRY_OPTOUT=1" >> "$GITHUB_ENV"
-        elif [ "$INPUT_TELEMETRY" = "on" ]; then
-          "$ruyi_bin" telemetry consent
-        else
-          "$ruyi_bin" config set telemetry.mode "$INPUT_TELEMETRY"
-        fi
-
-        if [ -n "$INPUT_REPO_REMOTE" ]; then
-          "$ruyi_bin" config set repo.remote "$INPUT_REPO_REMOTE"
-        fi
-
-        if [ -n "$INPUT_REPO_BRANCH" ]; then
-          "$ruyi_bin" config set repo.branch "$INPUT_REPO_BRANCH"
-        fi
-
-        if [ -n "$INPUT_REPO_LOCAL" ]; then
-          "$ruyi_bin" config set repo.local "$INPUT_REPO_LOCAL"
-        fi
-
-        if [ -n "$INPUT_EXTRA_CONFIG" ]; then
-          printf '\n%s\n' "$INPUT_EXTRA_CONFIG" >> "$config_root/config.toml"
-        fi
-
-        if [ "$INPUT_UPDATE" = "true" ]; then
-          "$ruyi_bin" update
-        elif [ "$INPUT_UPDATE" != "false" ]; then
-          echo "::error::update must be true or false"
-          exit 2
-        fi
-
-        installed_version="$("$python_bin" -c 'from ruyi.version import RUYI_SEMVER; print(RUYI_SEMVER)')"
-
-        {
-          echo "ruyi-bin=$ruyi_bin"
-          echo "ruyi-version=$installed_version"
-          echo "python-venv=$install_root"
-          echo "config-root=$config_root"
-          echo "cache-root=$cache_root"
-          echo "data-root=$data_root"
-          echo "state-root=$state_root"
-        } >> "$GITHUB_OUTPUT"
-
-    - name: Prepare telemetry post-run action
-      if: ${{ inputs.telemetry == 'on' }}
-      shell: bash
-      run: |
-        set -euo pipefail
-
-        git_dir="$GITHUB_WORKSPACE/.git"
-        if [ ! -d "$git_dir" ] || [ -L "$git_dir" ]; then
-          echo "::error::telemetry=on requires setup-ruyi to run after actions/checkout in a workspace with a regular .git directory. Run actions/checkout first, or set telemetry to local or off."
-          exit 2
-        fi
-
-        helper_root="$git_dir/ruyi-actions"
-        helper_dir="$helper_root/telemetry-upload"
-        if [ -L "$helper_root" ] || [ -L "$helper_dir" ] || [ -L "$helper_dir/action.yml" ] || [ -L "$helper_dir/index.js" ]; then
-          echo "::error::Refusing to prepare telemetry post-run action through a symlinked helper path."
-          exit 2
-        fi
-
-        mkdir -p "$helper_dir"
-        cp "$GITHUB_ACTION_PATH/telemetry-upload/action.yml" "$helper_dir/action.yml"
-        cp "$GITHUB_ACTION_PATH/telemetry-upload/index.js" "$helper_dir/index.js"
-
-    - name: Register telemetry upload
-      if: ${{ inputs.telemetry == 'on' }}
-      uses: ./.git/ruyi-actions/telemetry-upload
-      with:
-        ruyi-bin: ${{ steps.install.outputs.ruyi-bin }}
+  using: node24
+  main: dist/index.js
+  post: dist/index.js
+  post-if: always()

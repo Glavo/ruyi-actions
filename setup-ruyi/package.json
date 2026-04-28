@@ -1,0 +1,14 @@
+{
+  "name": "setup-ruyi",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "ncc build src/index.js -o dist --license licenses.txt"
+  },
+  "dependencies": {
+    "@actions/cache": "^6.0.0"
+  },
+  "devDependencies": {
+    "@vercel/ncc": "^0.38.4"
+  }
+}

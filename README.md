@@ -76,8 +76,8 @@ Useful inputs:
 
 | Input | Default | Description |
 | --- | --- | --- |
-| `setup-python` | `true` | Run `actions/setup-python` before installing Ruyi. |
-| `python-version` | `3.x` | Python version passed to `actions/setup-python` when `setup-python` is `true`. |
+| `setup-python` | `false` | Compatibility input. `setup-ruyi` uses Python from `PATH`; run `actions/setup-python` before this action when a specific Python version is required. |
+| `python-version` | `3.x` | Compatibility input retained for older workflows. |
 | `version` | empty | Ruyi version to install from PyPI. |
 | `install-spec` | empty | Full pip requirement specifier. Overrides `version`. |
 | `pip-extra-args` | empty | Extra arguments passed to `pip install`. |
@@ -88,7 +88,7 @@ Useful inputs:
 | `repo-branch` | empty | Override `repo.branch`. |
 | `repo-local` | empty | Override `repo.local`. Must be absolute. |
 | `extra-config` | empty | Extra TOML appended to `~/.config/ruyi/config.toml`. |
-| `telemetry` | `on` | Ruyi telemetry mode: `off`, `local`, or `on`. When `on`, `setup-ruyi` must run after `actions/checkout` and uploads telemetry in a post-run step. |
+| `telemetry` | `on` | Ruyi telemetry mode: `off`, `local`, or `on`. When `on`, `setup-ruyi` uploads telemetry in its post-run step. |
 
 Useful outputs:
 
@@ -102,7 +102,7 @@ Useful outputs:
 | `data-root` | Ruyi data root. |
 | `state-root` | Ruyi state root. |
 
-If your workflow already configures Python, disable the built-in Python setup:
+If your runner does not provide a suitable Python, set it up before `setup-ruyi`:
 
 ```yaml
 steps:
@@ -111,8 +111,6 @@ steps:
       python-version: "3.12"
 
   - uses: Glavo/ruyi-actions/setup-ruyi@main
-    with:
-      setup-python: "false"
 ```
 
 ### `setup-ruyi-venv`
