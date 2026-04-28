@@ -2,7 +2,7 @@
 
 GitHub Actions for setting up RISC-V cross-compilation environments in CI.
 
-These actions install the required toolchains, prepare a ready-to-use cross-compilation environment, and export CMake and Meson configuration paths for later build steps. They use RuyiSDK's RISC-V package and environment support, and are designed for Linux runners.
+These actions install the required toolchains, prepare a ready-to-use cross-compilation environment, and export CMake and Meson configuration paths for later build steps. They use [RuyiSDK](https://ruyisdk.org/)'s RISC-V package and environment support, and are designed for Linux runners.
 
 In practice, the actions can:
 
