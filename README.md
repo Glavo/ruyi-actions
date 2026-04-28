@@ -26,7 +26,7 @@ jobs:
 
       - uses: ruyisdk/ruyi-actions/setup-ruyi-venv@v1
         with:
-          profile: riscv64
+          profile: generic
           toolchain: gnu-plct
           path: .ruyi-venv
 
@@ -112,7 +112,7 @@ steps:
 
   - uses: ruyisdk/ruyi-actions/setup-ruyi-venv@v1
     with:
-      profile: riscv64
+      profile: generic
       toolchain: gnu-plct
       path: .ruyi-venv
 

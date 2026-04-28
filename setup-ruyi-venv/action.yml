@@ -242,7 +242,16 @@ runs:
           venv_args+=(--extra-commands-from "$atom")
         done
 
+        set +e
         ruyi "${venv_args[@]}"
+        rc=$?
+        set -e
+        if [ "$rc" -ne 0 ]; then
+          echo "::group::Available Ruyi profiles"
+          ruyi list profiles || true
+          echo "::endgroup::"
+          exit "$rc"
+        fi
 
         bin_path="$venv_path/bin"
         activate_script="$bin_path/ruyi-activate"
