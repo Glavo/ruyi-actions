@@ -172,12 +172,12 @@ runs:
 
         if [ -e "$venv_path" ]; then
           if [ "$INPUT_FORCE" = "true" ]; then
-            case "$venv_path" in
-              /|"$HOME"|"$GITHUB_WORKSPACE")
-                echo "::error::Refusing to remove unsafe virtual environment path: $venv_path"
-                exit 2
-                ;;
-            esac
+            workspace_path="$(python -c 'import pathlib, sys; print(pathlib.Path(sys.argv[1]).resolve())' "$GITHUB_WORKSPACE")"
+            is_relative_to_workspace="$(python -c 'import pathlib, sys; p = pathlib.Path(sys.argv[1]); root = pathlib.Path(sys.argv[2]); print("true" if p == root or root in p.parents else "false")' "$venv_path" "$workspace_path")"
+            if [ "$is_relative_to_workspace" != "true" ] || [ "$venv_path" = "$workspace_path" ]; then
+              echo "::error::Refusing to remove virtual environment path outside the workspace: $venv_path"
+              exit 2
+            fi
             rm -rf -- "$venv_path"
           else
             echo "::error::Virtual environment path already exists: $venv_path"

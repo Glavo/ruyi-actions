@@ -30,9 +30,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: Glavo/ruyi-actions/setup-ruyi@v1
+      - uses: Glavo/ruyi-actions/setup-ruyi@main
 
-      - uses: Glavo/ruyi-actions/setup-ruyi-venv@v1
+      - uses: Glavo/ruyi-actions/setup-ruyi-venv@main
         with:
           profile: generic
           toolchain: gnu-plct
@@ -66,7 +66,7 @@ Installs `ruyi`, adds it to `PATH`, restores Ruyi caches, configures repositorie
 
 ```yaml
 steps:
-  - uses: Glavo/ruyi-actions/setup-ruyi@v1
+  - uses: Glavo/ruyi-actions/setup-ruyi@main
     with:
       version: "0.49.0-alpha.20260422"
       update: "true"
@@ -110,7 +110,7 @@ steps:
     with:
       python-version: "3.12"
 
-  - uses: Glavo/ruyi-actions/setup-ruyi@v1
+  - uses: Glavo/ruyi-actions/setup-ruyi@main
     with:
       setup-python: "false"
 ```
@@ -121,9 +121,9 @@ Installs requested Ruyi packages and creates a Ruyi virtual environment. This ac
 
 ```yaml
 steps:
-  - uses: Glavo/ruyi-actions/setup-ruyi@v1
+  - uses: Glavo/ruyi-actions/setup-ruyi@main
 
-  - uses: Glavo/ruyi-actions/setup-ruyi-venv@v1
+  - uses: Glavo/ruyi-actions/setup-ruyi-venv@main
     with:
       profile: generic
       toolchain: gnu-plct
@@ -171,7 +171,7 @@ Useful outputs and environment variables:
 Use `extra-config` to append additional Ruyi repository configuration.
 
 ```yaml
-- uses: Glavo/ruyi-actions/setup-ruyi@v1
+- uses: Glavo/ruyi-actions/setup-ruyi@main
   with:
     extra-config: |
       [[repos]]
