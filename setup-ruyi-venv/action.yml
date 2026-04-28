@@ -1,0 +1,275 @@
+name: Setup Ruyi Virtual Environment
+description: Install Ruyi packages and create a Ruyi virtual environment for cross-compilation.
+author: RuyiSDK
+
+branding:
+  icon: terminal
+  color: red
+
+inputs:
+  profile:
+    description: Ruyi profile used to create the virtual environment.
+    required: true
+  path:
+    description: Destination path for the Ruyi virtual environment.
+    required: false
+    default: ".ruyi-venv"
+  name:
+    description: Optional display name for the Ruyi virtual environment.
+    required: false
+    default: ""
+  toolchain:
+    description: Toolchain atom or a newline/comma-separated list of toolchain atoms.
+    required: true
+  emulator:
+    description: Optional emulator atom.
+    required: false
+    default: ""
+  extra-commands:
+    description: Optional newline/comma-separated list of package atoms that provide extra commands.
+    required: false
+    default: ""
+  with-sysroot:
+    description: Provision a sysroot inside the virtual environment.
+    required: false
+    default: "true"
+  sysroot-package:
+    description: Optional atom of the package to use as sysroot source.
+    required: false
+    default: ""
+  copy-sysroot-from-dir:
+    description: Optional directory to copy as the sysroot.
+    required: false
+    default: ""
+  symlink-sysroot-from-dir:
+    description: Optional directory to symlink as the sysroot.
+    required: false
+    default: ""
+  install:
+    description: Install referenced packages before creating the virtual environment.
+    required: false
+    default: "true"
+  reinstall:
+    description: Pass --reinstall when installing referenced packages.
+    required: false
+    default: "false"
+  force:
+    description: Remove an existing virtual environment at path before creating it.
+    required: false
+    default: "false"
+
+outputs:
+  venv-path:
+    description: Absolute path to the Ruyi virtual environment.
+    value: ${{ steps.venv.outputs.venv-path }}
+  bin-path:
+    description: Path to the virtual environment bin directory.
+    value: ${{ steps.venv.outputs.bin-path }}
+  activate-script:
+    description: Bash activation script path.
+    value: ${{ steps.venv.outputs.activate-script }}
+  cmake-toolchain-file:
+    description: CMake toolchain file path.
+    value: ${{ steps.venv.outputs.cmake-toolchain-file }}
+  meson-cross-file:
+    description: Meson cross file path.
+    value: ${{ steps.venv.outputs.meson-cross-file }}
+  sysroot:
+    description: Primary sysroot path, when provisioned.
+    value: ${{ steps.venv.outputs.sysroot }}
+
+runs:
+  using: composite
+  steps:
+    - name: Create Ruyi virtual environment
+      id: venv
+      shell: bash
+      env:
+        INPUT_PROFILE: ${{ inputs.profile }}
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_NAME: ${{ inputs.name }}
+        INPUT_TOOLCHAIN: ${{ inputs.toolchain }}
+        INPUT_EMULATOR: ${{ inputs.emulator }}
+        INPUT_EXTRA_COMMANDS: ${{ inputs.extra-commands }}
+        INPUT_WITH_SYSROOT: ${{ inputs.with-sysroot }}
+        INPUT_SYSROOT_PACKAGE: ${{ inputs.sysroot-package }}
+        INPUT_COPY_SYSROOT_FROM_DIR: ${{ inputs.copy-sysroot-from-dir }}
+        INPUT_SYMLINK_SYSROOT_FROM_DIR: ${{ inputs.symlink-sysroot-from-dir }}
+        INPUT_INSTALL: ${{ inputs.install }}
+        INPUT_REINSTALL: ${{ inputs.reinstall }}
+        INPUT_FORCE: ${{ inputs.force }}
+      run: |
+        set -euo pipefail
+
+        if ! command -v ruyi >/dev/null 2>&1; then
+          echo "::error::ruyi is not available on PATH. Run setup-ruyi before setup-ruyi-venv."
+          exit 127
+        fi
+
+        case "$INPUT_WITH_SYSROOT" in
+          true|false) ;;
+          *)
+            echo "::error::with-sysroot must be true or false"
+            exit 2
+            ;;
+        esac
+
+        case "$INPUT_INSTALL" in
+          true|false) ;;
+          *)
+            echo "::error::install must be true or false"
+            exit 2
+            ;;
+        esac
+
+        case "$INPUT_REINSTALL" in
+          true|false) ;;
+          *)
+            echo "::error::reinstall must be true or false"
+            exit 2
+            ;;
+        esac
+
+        case "$INPUT_FORCE" in
+          true|false) ;;
+          *)
+            echo "::error::force must be true or false"
+            exit 2
+            ;;
+        esac
+
+        venv_path="$(python -c 'import pathlib, sys; print(pathlib.Path(sys.argv[1]).resolve())' "$INPUT_PATH")"
+
+        normalize_list() {
+          printf '%s\n' "$1" \
+            | tr ',' '\n' \
+            | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
+            | sed '/^$/d'
+        }
+
+        mapfile -t toolchains < <(normalize_list "$INPUT_TOOLCHAIN")
+        mapfile -t extra_commands < <(normalize_list "$INPUT_EXTRA_COMMANDS")
+
+        if [ "${#toolchains[@]}" -eq 0 ]; then
+          echo "::error::toolchain must contain at least one atom"
+          exit 2
+        fi
+
+        sysroot_sources=0
+        [ -n "$INPUT_SYSROOT_PACKAGE" ] && sysroot_sources=$((sysroot_sources + 1))
+        [ -n "$INPUT_COPY_SYSROOT_FROM_DIR" ] && sysroot_sources=$((sysroot_sources + 1))
+        [ -n "$INPUT_SYMLINK_SYSROOT_FROM_DIR" ] && sysroot_sources=$((sysroot_sources + 1))
+
+        if [ "$sysroot_sources" -gt 1 ]; then
+          echo "::error::Only one sysroot source input may be set."
+          exit 2
+        fi
+
+        if [ "$INPUT_WITH_SYSROOT" = "false" ] && [ "$sysroot_sources" -gt 0 ]; then
+          echo "::error::with-sysroot=false cannot be combined with a sysroot source input."
+          exit 2
+        fi
+
+        if [ -e "$venv_path" ]; then
+          if [ "$INPUT_FORCE" = "true" ]; then
+            case "$venv_path" in
+              /|"$HOME"|"$GITHUB_WORKSPACE")
+                echo "::error::Refusing to remove unsafe virtual environment path: $venv_path"
+                exit 2
+                ;;
+            esac
+            rm -rf -- "$venv_path"
+          else
+            echo "::error::Virtual environment path already exists: $venv_path"
+            exit 1
+          fi
+        fi
+
+        install_atoms=()
+        for atom in "${toolchains[@]}"; do
+          install_atoms+=("$atom")
+        done
+        if [ -n "$INPUT_EMULATOR" ]; then
+          install_atoms+=("$INPUT_EMULATOR")
+        fi
+        if [ -n "$INPUT_SYSROOT_PACKAGE" ]; then
+          install_atoms+=("$INPUT_SYSROOT_PACKAGE")
+        fi
+        for atom in "${extra_commands[@]}"; do
+          install_atoms+=("$atom")
+        done
+
+        if [ "$INPUT_INSTALL" = "true" ] && [ "${#install_atoms[@]}" -gt 0 ]; then
+          install_args=(install)
+          if [ "$INPUT_REINSTALL" = "true" ]; then
+            install_args+=(--reinstall)
+          fi
+          install_args+=("${install_atoms[@]}")
+          ruyi "${install_args[@]}"
+        fi
+
+        venv_args=(venv "$INPUT_PROFILE" "$venv_path")
+
+        if [ -n "$INPUT_NAME" ]; then
+          venv_args+=(--name "$INPUT_NAME")
+        fi
+
+        for atom in "${toolchains[@]}"; do
+          venv_args+=(--toolchain "$atom")
+        done
+
+        if [ -n "$INPUT_EMULATOR" ]; then
+          venv_args+=(--emulator "$INPUT_EMULATOR")
+        fi
+
+        if [ "$INPUT_WITH_SYSROOT" = "false" ]; then
+          venv_args+=(--without-sysroot)
+        fi
+
+        if [ -n "$INPUT_SYSROOT_PACKAGE" ]; then
+          venv_args+=(--copy-sysroot-from-pkg "$INPUT_SYSROOT_PACKAGE")
+        fi
+
+        if [ -n "$INPUT_COPY_SYSROOT_FROM_DIR" ]; then
+          venv_args+=(--copy-sysroot-from-dir "$INPUT_COPY_SYSROOT_FROM_DIR")
+        fi
+
+        if [ -n "$INPUT_SYMLINK_SYSROOT_FROM_DIR" ]; then
+          venv_args+=(--symlink-sysroot-from-dir "$INPUT_SYMLINK_SYSROOT_FROM_DIR")
+        fi
+
+        for atom in "${extra_commands[@]}"; do
+          venv_args+=(--extra-commands-from "$atom")
+        done
+
+        ruyi "${venv_args[@]}"
+
+        bin_path="$venv_path/bin"
+        activate_script="$bin_path/ruyi-activate"
+        cmake_toolchain_file="$venv_path/toolchain.cmake"
+        meson_cross_file="$venv_path/meson-cross.ini"
+        sysroot_path=""
+
+        if [ -e "$venv_path/sysroot" ]; then
+          sysroot_path="$venv_path/sysroot"
+        fi
+
+        echo "$bin_path" >> "$GITHUB_PATH"
+        {
+          echo "RUYI_VENV=$venv_path"
+          echo "RUYI_VENV_BIN=$bin_path"
+          echo "RUYI_CMAKE_TOOLCHAIN_FILE=$cmake_toolchain_file"
+          echo "RUYI_MESON_CROSS_FILE=$meson_cross_file"
+          if [ -n "$sysroot_path" ]; then
+            echo "RUYI_SYSROOT=$sysroot_path"
+          fi
+        } >> "$GITHUB_ENV"
+
+        {
+          echo "venv-path=$venv_path"
+          echo "bin-path=$bin_path"
+          echo "activate-script=$activate_script"
+          echo "cmake-toolchain-file=$cmake_toolchain_file"
+          echo "meson-cross-file=$meson_cross_file"
+          echo "sysroot=$sysroot_path"
+        } >> "$GITHUB_OUTPUT"
