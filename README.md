@@ -88,7 +88,7 @@ Useful inputs:
 | `repo-branch` | empty | Override `repo.branch`. |
 | `repo-local` | empty | Override `repo.local`. Must be absolute. |
 | `extra-config` | empty | Extra TOML appended to `~/.config/ruyi/config.toml`. |
-| `telemetry` | `on` | Ruyi telemetry mode: `off`, `local`, or `on`. |
+| `telemetry` | `on` | Ruyi telemetry mode: `off`, `local`, or `on`. When `on`, `setup-ruyi` must run after `actions/checkout` and uploads telemetry in a post-run step. |
 
 Useful outputs:
 
