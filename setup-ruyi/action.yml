@@ -58,7 +58,7 @@ inputs:
   telemetry:
     description: Ruyi telemetry mode for CI. Use off, local, or on.
     required: false
-    default: "off"
+    default: "on"
 
 outputs:
   ruyi-bin:
@@ -190,6 +190,8 @@ runs:
         if [ "$INPUT_TELEMETRY" = "off" ]; then
           export RUYI_TELEMETRY_OPTOUT=1
           echo "RUYI_TELEMETRY_OPTOUT=1" >> "$GITHUB_ENV"
+        elif [ "$INPUT_TELEMETRY" = "on" ]; then
+          "$ruyi_bin" telemetry consent
         else
           "$ruyi_bin" config set telemetry.mode "$INPUT_TELEMETRY"
         fi
